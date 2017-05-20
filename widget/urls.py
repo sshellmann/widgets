@@ -16,6 +16,10 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
+from widget.views import get_widgets
+
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+
+    url(r'^widgets/$', get_widgets),
 ]
