@@ -1,0 +1,9 @@
+*.sedbak
+*.pyc
+*.swo
+*.swp
+*.swn
+npm-debug.log
+__pycache__
+node_modules/
+*.coverage

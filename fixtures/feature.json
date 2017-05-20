@@ -1,0 +1,114 @@
+[
+{
+    "model": "widget.feature",
+    "pk": 1,
+    "fields": {
+        "label": "Small",
+        "category": 3
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 2,
+    "fields": {
+        "label": "Large",
+        "category": 3
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 3,
+    "fields": {
+        "label": "Huge",
+        "category": 3
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 4,
+    "fields": {
+        "label": "Red",
+        "category": 3
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 5,
+    "fields": {
+        "label": "Blue",
+        "category": 3
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 6,
+    "fields": {
+        "label": "Small",
+        "category": 2
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 7,
+    "fields": {
+        "label": "Large",
+        "category": 2
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 8,
+    "fields": {
+        "label": "Red",
+        "category": 2
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 9,
+    "fields": {
+        "label": "Blue",
+        "category": 2
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 10,
+    "fields": {
+        "label": "Chrome",
+        "category": 2
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 11,
+    "fields": {
+        "label": "Small",
+        "category": 1
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 12,
+    "fields": {
+        "label": "Large",
+        "category": 1
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 13,
+    "fields": {
+        "label": "Red",
+        "category": 1
+    }
+},
+{
+    "model": "widget.feature",
+    "pk": 14,
+    "fields": {
+        "label": "Blue",
+        "category": 1
+    }
+}
+]

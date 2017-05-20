@@ -1,0 +1,26 @@
+[
+{
+    "model": "widget.category",
+    "pk": 1,
+    "fields": {
+        "name": "prime",
+        "label": "Widget Prime"
+    }
+},
+{
+    "model": "widget.category",
+    "pk": 2,
+    "fields": {
+        "name": "elite",
+        "label": "Widget Elite"
+    }
+},
+{
+    "model": "widget.category",
+    "pk": 3,
+    "fields": {
+        "name": "extreme",
+        "label": "Widget Extreme Edition"
+    }
+}
+]
