@@ -16,10 +16,12 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
-from widget.views import get_widgets
+from widget.views import widget_, order
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
-    url(r'^widgets/$', get_widgets),
+    url(r'^widget/$', widget_),
+    url(r'^order/$', order),
+    url(r'^order/item/$', order_item),
 ]
