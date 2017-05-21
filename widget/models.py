@@ -2,8 +2,8 @@ import uuid
 from decimal import Decimal
 
 from django.db import models
-from django.core.validators import MinValueValidator
 from django.contrib import admin
+from django.core.validators import MinValueValidator
 
 
 class FullDisplayModelMixin(object):
@@ -36,8 +36,13 @@ class Widget(FullDisplayModelMixin, models.Model):
     description = models.CharField(max_length=1000, blank=True, null=True)
     quantity = models.PositiveIntegerField(blank=True, null=True)
 
+
+def generate_order_number():
+    return uuid.uuid4().hex[:10]
+
+
 class Order(FullDisplayModelMixin, models.Model):
-    number = models.CharField(max_length=10, unique=True, default=lambda: uuid.uuid4().hex[:10])
+    number = models.CharField(max_length=10, unique=True, default=generate_order_number)
     widgets = models.ManyToManyField(Widget, verbose_name="Items in order", through="OrderItem")
 
 

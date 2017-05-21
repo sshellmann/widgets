@@ -6,7 +6,7 @@ from rest_framework import exceptions
 from rest_framework.decorators import api_view
 
 from widget.models import Widget, Order, OrderItem
-from widget.forms import OrderWidgetForm
+from widget.forms import WidgetForm, OrderWidgetForm, UpdateWidgetForm
 
 
 def get_widget_data(widgets):
@@ -33,7 +33,7 @@ def get_order_data(order):
     return data
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST", "PATCH"])
 def widget_(request, widget_id=None):
     if request.method == "GET":
         if widget_id:
@@ -59,6 +59,29 @@ def widget_(request, widget_id=None):
         widgets = widgets.all()
 
         return JsonResponse({"widgets": get_widget_data(widgets)})
+    elif request.method == "POST":
+        form = WidgetForm(request.data)
+        if form.is_valid():
+            form.save()
+            return HttpResponse()
+        else:
+            raise exceptions.ValidationError(form.errors.as_text())
+    elif request.method == "PATCH":
+        if not widget_id:
+            raise exceptions.ValidationError("Widget id necessary")
+        widget = Widget.objects.get(id=int(widget_id))
+        form = UpdateWidgetForm(request.data)
+        if form.is_valid():
+            quantity = form.cleaned_data["quantity"]
+            if quantity:
+                widget.quantity = quantity
+            price = form.cleaned_data["price"]
+            if price:
+                widget.price = price
+            widget.save()
+        else:
+            raise exceptions.ValidationError(form.errors.as_text())
+        return HttpResponse()
 
 
 @api_view(["GET", "POST", "DELETE"])
@@ -69,7 +92,7 @@ def order_(request, order_number=None):
         order = Order.objects.get(number=order_number)
         return JsonResponse({"widgets": get_order_data(order)})
     elif request.method == "POST":
-        form = OrderWidgetForm(request.POST)
+        form = OrderWidgetForm(request.data)
         if form.is_valid():
             order = Order.objects.create()
             quantity = form.cleaned_data["quantity"]
@@ -83,7 +106,7 @@ def order_(request, order_number=None):
         return HttpResponse()
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
 def order_item(request, order_number, widget_id=None):
     order = Order.objects.get(number=order_number)
     if request.method == "GET":
@@ -92,10 +115,19 @@ def order_item(request, order_number, widget_id=None):
         widget = Widget.objects.get(id=widget_id)
         return JsonResponse({"widgets": get_order_data(order)})
     elif request.method == "POST":
-        form = OrderWidgetForm(request.POST)
+        form = OrderWidgetForm(request.data)
         if form.is_valid():
             quantity = form.cleaned_data["quantity"]
             OrderItem.objects.create(widget=form.widget, order=order, quantity=quantity)
         else:
             raise exceptions.ValidationError(form.errors.as_text())
+        return HttpResponse()
+    elif request.method == "DELETE":
+        if not widget_id:
+            raise exceptions.ValidationError("Widget id necessary")
+        widget = Widget.objects.get(id=int(widget_id))
+        order_item = OrderItem.objects.filter(widget=widget, order=order)
+        order_item.delete()
+        if order.orderitem_set.count() == 0:
+            order.delete()
         return HttpResponse()

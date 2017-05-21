@@ -1,6 +1,27 @@
 from django import forms
+from django.forms import ModelForm
 
 from widget.models import Widget
+
+
+class WidgetForm(ModelForm):
+    class Meta:
+        model = Widget
+        fields = ["category", "price", "name", "description", "quantity", "features"]
+
+    def clean_features(self):
+        category = self.cleaned_data["category"]
+        category_features = category.feature_set.all()
+
+        for feature in self.cleaned_data["features"].all():
+            if feature not in category_features:
+                raise forms.ValidationError("Attempt to add invalid feature")
+        return self.cleaned_data["features"]
+
+
+class UpdateWidgetForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, required=False)
+    price = forms.DecimalField(required=False)
 
 
 class OrderWidgetForm(forms.Form):
