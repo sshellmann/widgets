@@ -37,7 +37,7 @@ class EmptyWidgetTestCase(TestCase):
         }
 
 
-class WidgetTestCaseWithData(TestCaseWithData):
+class DataWidgetTestCase(TestCaseWithData):
     def test_all(self):
         client = Client()
         response = client.get("/widget/")
@@ -84,14 +84,24 @@ class WidgetTestCaseWithData(TestCaseWithData):
             ]
         }
 
+    def test_quantity(self):
+        self.widget1.quantity = 10
+        self.widget1.save()
+        self.widget2.quantity = 0
+        self.widget2.save()
+
+        order1 = Order.objects.create()
+        order2 = Order.objects.create()
+        #import ipdb; ipdb.set_trace()
+
 
 class OrderTestCase(TestCaseWithData):
     def test_get(self):
-        new_order = Order.objects.create()
-        new_order.widgets.add(self.widget1)
-        new_order.widgets.add(self.widget3)
+        order = Order.objects.create()
+        order.widgets.add(self.widget1)
+        order.widgets.add(self.widget3)
         client = Client()
-        response = client.get("/order/", {"order_number": new_order.number})
+        response = client.get("/order/%s" % order.number)
         assert json.loads(response.content) == {
             "widgets": [
                 {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
@@ -103,9 +113,55 @@ class OrderTestCase(TestCaseWithData):
     def test_create(self):
         assert Order.objects.count() == 0
         client = Client()
-        response = client.post("/order/", {"widget_id": self.widget1.id})
+        response = client.post("/order/", {"widget_id": str(self.widget1.id)})
         assert response.status_code == 200
         assert Order.objects.count() == 1
         order = Order.objects.first()
         assert order.widgets.count() == 1
         assert order.widgets.first().id == self.widget1.id
+
+
+    def test_delete(self):
+        order = Order.objects.create()
+        order.widgets.add(self.widget1)
+        order.widgets.add(self.widget3)
+        assert Order.objects.count() == 1
+        client = Client()
+        response = client.delete("/order/%s/" % order.number)
+        assert response.status_code == 200
+        assert Order.objects.count() == 0
+
+
+class OrderItemTestCase(TestCaseWithData):
+    def test_get(self):
+        order = Order.objects.create()
+        order.widgets.add(self.widget1)
+        order.widgets.add(self.widget3)
+        client = Client()
+        response = client.get("/order/%s/item/" % order.number)
+        assert json.loads(response.content) == {
+            "widgets": [
+                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
+                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+            ]
+        }
+
+        response = client.get("/order/%s/item/%s" % (order.number, self.widget1.id))
+        assert json.loads(response.content) == {
+            "widgets": [
+                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
+            ]
+        }
+
+
+    def test_create(self):
+        order = Order.objects.create()
+        order.widgets.add(self.widget1)
+        client = Client()
+        response = client.post("/order/%s/item/" % order.number, {"widget_id": str(self.widget3.id)})
+        assert response.status_code == 200
+        order = Order.objects.first()
+        assert order.widgets.count() == 2
+        widget_items = order.widgets.all()
+        assert widget_items[0].id == self.widget1.id
+        assert widget_items[1].id == self.widget3.id

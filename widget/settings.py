@@ -31,6 +31,9 @@ ALLOWED_HOSTS = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler'
+}
 
 # Application definition
 
@@ -41,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'rest_framework',
 
     'widget',
 ]

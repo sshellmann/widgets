@@ -2,8 +2,10 @@ from operator import and_, or_
 
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
+from rest_framework import exceptions
 
 from widget.models import Widget, Order
+from widget.forms import OrderWidgetForm
 
 
 def get_widget_data(widgets):
@@ -19,12 +21,16 @@ def get_widget_data(widgets):
     return widget_data
 
 
-def widget_(request):
+def widget_(request, widget_id=None):
     if request.method == "GET":
+        if widget_id:
+            widget = Widget.objects.get(id=widget_id)
+            return JsonResponse({"widgets": get_widget_data([widget])})
+
         widgets = Widget.objects.all()
 
         category_id = request.GET.get("category")
-        if category_id:
+        if category_id and category_id.isdigit():
             widgets = widgets.filter(category__id = category_id)
 
         # getlist on a QueryDict acts like it is multiple values coming from a checkbox with the same key
@@ -41,22 +47,43 @@ def widget_(request):
 
         return JsonResponse({"widgets": get_widget_data(widgets)})
     else:
-        # Will need to bring in django-rest framework to properly handle this
-        raise Exception("405")
+        raise exceptions.MethodNotAllowed(request.method)
 
 
-def order(request):
+def order_(request, order_number=None):
     if request.method == "GET":
-        order_number = request.GET.get("order_number")
+        if not order_number:
+            raise exceptions.PermissionDenied()
         order = Order.objects.get(number=order_number)
         return JsonResponse({"widgets": get_widget_data(order.widgets.all())})
+    elif request.method == "POST":
+        form = OrderWidgetForm(request.POST)
+        if form.is_valid():
+            order = Order.objects.create()
+            order.widgets.add(form.widget)
+            return HttpResponse(order.number)
+        else:
+            raise exceptions.ParseError()
+    elif request.method == "DELETE":
+        order = Order.objects.get(number=order_number)
+        order.delete()
+        return HttpResponse()
     else:
-        widget_id = request.POST.get("widget_id")
+        raise exceptions.MethodNotAllowed(request.method)
+
+def order_item(request, order_number, widget_id=None):
+    order = Order.objects.get(number=order_number)
+    if request.method == "GET":
+        if not widget_id:
+            return order_(request, order_number)
         widget = Widget.objects.get(id=widget_id)
-
-        order = Order.objects.create()
-        order.widgets.add(widget)
-        return HttpResponse(order.number)
-
-def order_item(request):
-    pass
+        return JsonResponse({"widgets": get_widget_data([widget])})
+    elif request.method == "POST":
+        form = OrderWidgetForm(request.POST)
+        if form.is_valid():
+            order.widgets.add(form.widget)
+        else:
+             raise exceptions.ParseError()
+        return HttpResponse()
+    else:
+        raise exceptions.MethodNotAllowed(request.method)
