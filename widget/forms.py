@@ -21,7 +21,7 @@ class OrderWidgetForm(forms.Form):
         if (
             quantity is not None
             # if quantity_left is None, there are infinite available
-            and self.widget.quantity_left is not None
-            and quantity > self.widget.quantity_left
+            and self.widget.quantity is not None
+            and quantity > self.widget.quantity
         ):
-            self.add_error("quantity", "Widget is out of stock")
+            self.add_error("quantity", "Not enough widgets in stock")

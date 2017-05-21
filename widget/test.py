@@ -3,7 +3,7 @@ import json
 from django.test import TestCase, Client
 from django.utils.datastructures import MultiValueDict
 
-from widget.models import Widget, Category, Feature, Order
+from widget.models import Widget, Category, Feature, Order, OrderItem
 
 
 class TestCaseWithData(TestCase):
@@ -27,7 +27,7 @@ class TestCaseWithData(TestCase):
 
 
 class EmptyWidgetTestCase(TestCase):
-    def test_empty(self):
+    def test_no_widgets(self):
         client = Client()
         response = client.get("/widget/")
 
@@ -35,6 +35,11 @@ class EmptyWidgetTestCase(TestCase):
         assert json.loads(response.content) == {
             "widgets": []
         }
+
+    def test_invalid_request(self):
+        client = Client()
+        response = client.delete("/widget/")
+        assert response.status_code == 405
 
 
 class DataWidgetTestCase(TestCaseWithData):
@@ -45,20 +50,31 @@ class DataWidgetTestCase(TestCaseWithData):
         assert response.status_code == 200
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
-                {"category": "cat2", "price": "20.00", "features": ["Big", "Blue"], "name": "widget2", "description": "second widget"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"},
+                {"category": "cat2", "features": ["Big", "Blue"], "price": "20.00", "description": "second widget", "available_quantity": "unlimited", "name": "widget2"},
+                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "available_quantity": "unlimited", "name": "widget3"}
+            ]
+        }
+
+    def test_by_id(self):
+        client = Client()
+        response = client.get("/widget/%s" % self.widget1.id)
+
+        assert response.status_code == 200
+        assert json.loads(response.content) == {
+            "widgets": [
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"}
             ]
         }
 
     def test_by_category(self):
         client = Client()
-        response = client.get("/widget/", {"category": self.cat1.id})
+        response = client.get("/widget/", {"category": str(self.cat1.id)})
 
         assert response.status_code == 200
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"}
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"}
             ]
         }
 
@@ -69,8 +85,8 @@ class DataWidgetTestCase(TestCaseWithData):
         assert response.status_code == 200
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat2", "price": "20.00", "features": ["Big", "Blue"], "name": "widget2", "description": "second widget"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+                {"category": "cat2", "price": "20.00", "features": ["Big", "Blue"], "name": "widget2", "description": "second widget", "available_quantity": "unlimited"},
+                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget", "available_quantity": "unlimited"},
             ]
         }
 
@@ -79,33 +95,22 @@ class DataWidgetTestCase(TestCaseWithData):
         assert response.status_code == 200
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget", "available_quantity": "unlimited"},
+                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget", "available_quantity": "unlimited"},
             ]
         }
-
-    def test_quantity(self):
-        self.widget1.quantity = 10
-        self.widget1.save()
-        self.widget2.quantity = 0
-        self.widget2.save()
-
-        order1 = Order.objects.create()
-        order2 = Order.objects.create()
-        #import ipdb; ipdb.set_trace()
-
 
 class OrderTestCase(TestCaseWithData):
     def test_get(self):
         order = Order.objects.create()
-        order.widgets.add(self.widget1)
-        order.widgets.add(self.widget3)
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         client = Client()
         response = client.get("/order/%s" % order.number)
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
+                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
             ]
         }
 
@@ -113,7 +118,7 @@ class OrderTestCase(TestCaseWithData):
     def test_create(self):
         assert Order.objects.count() == 0
         client = Client()
-        response = client.post("/order/", {"widget_id": str(self.widget1.id)})
+        response = client.post("/order/", {"widget_id": str(self.widget1.id), "quantity": "10"})
         assert response.status_code == 200
         assert Order.objects.count() == 1
         order = Order.objects.first()
@@ -123,8 +128,8 @@ class OrderTestCase(TestCaseWithData):
 
     def test_delete(self):
         order = Order.objects.create()
-        order.widgets.add(self.widget1)
-        order.widgets.add(self.widget3)
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         assert Order.objects.count() == 1
         client = Client()
         response = client.delete("/order/%s/" % order.number)
@@ -132,33 +137,45 @@ class OrderTestCase(TestCaseWithData):
         assert Order.objects.count() == 0
 
 
+    def test_quantity(self):
+        assert Order.objects.count() == 0
+        self.widget1.quantity = 5
+        self.widget1.save()
+        client = Client()
+        response = client.post("/order/", {"widget_id": str(self.widget1.id), "quantity": "10"})
+        assert response.status_code == 400
+        assert response.content == '["* quantity\\n  * Not enough widgets in stock"]'
+        assert Order.objects.count() == 0
+
+
 class OrderItemTestCase(TestCaseWithData):
     def test_get(self):
         order = Order.objects.create()
-        order.widgets.add(self.widget1)
-        order.widgets.add(self.widget3)
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         client = Client()
         response = client.get("/order/%s/item/" % order.number)
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget"}
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
+                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
             ]
         }
 
         response = client.get("/order/%s/item/%s" % (order.number, self.widget1.id))
         assert json.loads(response.content) == {
             "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget"},
+                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
+                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
             ]
         }
 
 
     def test_create(self):
         order = Order.objects.create()
-        order.widgets.add(self.widget1)
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
         client = Client()
-        response = client.post("/order/%s/item/" % order.number, {"widget_id": str(self.widget3.id)})
+        response = client.post("/order/%s/item/" % order.number, {"widget_id": str(self.widget3.id), "quantity": "10"})
         assert response.status_code == 200
         order = Order.objects.first()
         assert order.widgets.count() == 2

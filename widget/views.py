@@ -3,8 +3,9 @@ from operator import and_, or_
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from rest_framework import exceptions
+from rest_framework.decorators import api_view
 
-from widget.models import Widget, Order
+from widget.models import Widget, Order, OrderItem
 from widget.forms import OrderWidgetForm
 
 
@@ -16,15 +17,27 @@ def get_widget_data(widgets):
             "category": widget.category.name,
             "features": [feature.label for feature in widget.features.all()],
             "price": widget.price,
+            "available_quantity": widget.quantity or "unlimited"
         } for widget in widgets
     ]
     return widget_data
 
 
+def get_order_data(order):
+    order_items = order.orderitem_set.all()
+    data = []
+    for order_item in order_items:
+        widget_data = get_widget_data([order_item.widget])[0]
+        widget_data["order_quantity"] = order_item.quantity
+        data.append(widget_data)
+    return data
+
+
+@api_view(["GET"])
 def widget_(request, widget_id=None):
     if request.method == "GET":
         if widget_id:
-            widget = Widget.objects.get(id=widget_id)
+            widget = Widget.objects.get(id=int(widget_id))
             return JsonResponse({"widgets": get_widget_data([widget])})
 
         widgets = Widget.objects.all()
@@ -46,44 +59,43 @@ def widget_(request, widget_id=None):
         widgets = widgets.all()
 
         return JsonResponse({"widgets": get_widget_data(widgets)})
-    else:
-        raise exceptions.MethodNotAllowed(request.method)
 
 
+@api_view(["GET", "POST", "DELETE"])
 def order_(request, order_number=None):
     if request.method == "GET":
         if not order_number:
             raise exceptions.PermissionDenied()
         order = Order.objects.get(number=order_number)
-        return JsonResponse({"widgets": get_widget_data(order.widgets.all())})
+        return JsonResponse({"widgets": get_order_data(order)})
     elif request.method == "POST":
         form = OrderWidgetForm(request.POST)
         if form.is_valid():
             order = Order.objects.create()
-            order.widgets.add(form.widget)
+            quantity = form.cleaned_data["quantity"]
+            OrderItem.objects.create(widget=form.widget, order=order, quantity=quantity)
             return HttpResponse(order.number)
         else:
-            raise exceptions.ParseError()
+            raise exceptions.ValidationError(form.errors.as_text())
     elif request.method == "DELETE":
         order = Order.objects.get(number=order_number)
         order.delete()
         return HttpResponse()
-    else:
-        raise exceptions.MethodNotAllowed(request.method)
 
+
+@api_view(["GET", "POST"])
 def order_item(request, order_number, widget_id=None):
     order = Order.objects.get(number=order_number)
     if request.method == "GET":
         if not widget_id:
             return order_(request, order_number)
         widget = Widget.objects.get(id=widget_id)
-        return JsonResponse({"widgets": get_widget_data([widget])})
+        return JsonResponse({"widgets": get_order_data(order)})
     elif request.method == "POST":
         form = OrderWidgetForm(request.POST)
         if form.is_valid():
-            order.widgets.add(form.widget)
+            quantity = form.cleaned_data["quantity"]
+            OrderItem.objects.create(widget=form.widget, order=order, quantity=quantity)
         else:
-             raise exceptions.ParseError()
+            raise exceptions.ValidationError(form.errors.as_text())
         return HttpResponse()
-    else:
-        raise exceptions.MethodNotAllowed(request.method)

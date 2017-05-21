@@ -36,14 +36,6 @@ class Widget(FullDisplayModelMixin, models.Model):
     description = models.CharField(max_length=1000, blank=True, null=True)
     quantity = models.PositiveIntegerField(blank=True, null=True)
 
-    @property
-    def quantity_left(self):
-        if self.quantity is None:
-            return
-        raise NotImplementedError()
-        return self.quantity
-
-
 class Order(FullDisplayModelMixin, models.Model):
     number = models.CharField(max_length=10, unique=True, default=lambda: uuid.uuid4().hex[:10])
     widgets = models.ManyToManyField(Widget, verbose_name="Items in order", through="OrderItem")
