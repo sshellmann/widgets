@@ -1,7 +1,6 @@
 import json
 
 from django.test import TestCase
-from django.utils.datastructures import MultiValueDict
 from rest_framework.test import APIClient
 
 from widget.models import Widget, Category, Feature, Order, OrderItem
@@ -167,7 +166,6 @@ class OrderTestCase(TestCaseWithData):
             ]
         }
 
-
     def test_create(self):
         assert Order.objects.count() == 0
         client = APIClient()
@@ -177,7 +175,6 @@ class OrderTestCase(TestCaseWithData):
         order = Order.objects.first()
         assert order.widgets.count() == 1
         assert order.widgets.first().id == self.widget1.id
-
 
     def test_delete(self):
         order = Order.objects.create()
@@ -189,7 +186,6 @@ class OrderTestCase(TestCaseWithData):
         assert response.status_code == 200
         assert Order.objects.count() == 0
 
-
     def test_quantity(self):
         assert Order.objects.count() == 0
         self.widget1.quantity = 5
@@ -199,6 +195,38 @@ class OrderTestCase(TestCaseWithData):
         assert response.status_code == 400
         assert response.content == '["* quantity\\n  * Not enough widgets in stock"]'
         assert Order.objects.count() == 0
+
+    def test_complete(self):
+        widget4 = Widget.objects.create(category=self.cat2, price="30.00", name="widget3", description="third widget", quantity=6)
+        widget4.features.add(self.feature3)
+        widget4.features.add(self.feature4)
+        widget4.features.add(self.feature5)
+        order = Order.objects.create()
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        OrderItem.objects.create(widget=widget4, order=order, quantity=5)
+
+        client = APIClient()
+        response = client.post("/order/%s/complete/" % order.number)
+        assert response.status_code == 200
+
+        order = Order.objects.get(id=order.id)
+        assert order.completed
+
+        assert Widget.objects.get(id=self.widget1.id).quantity == None
+        assert Widget.objects.get(id=widget4.id).quantity == 1
+
+    def test_complete_failure(self):
+        widget4 = Widget.objects.create(category=self.cat2, price="30.00", name="widget3", description="third widget", quantity=4)
+        widget4.features.add(self.feature3)
+        widget4.features.add(self.feature4)
+        widget4.features.add(self.feature5)
+        order = Order.objects.create()
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        OrderItem.objects.create(widget=widget4, order=order, quantity=5)
+
+        client = APIClient()
+        response = client.post("/order/%s/complete/" % order.number)
+        assert response.status_code == 400
 
 
 class OrderItemTestCase(TestCaseWithData):
@@ -222,7 +250,6 @@ class OrderItemTestCase(TestCaseWithData):
                 {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
             ]
         }
-
 
     def test_create(self):
         order = Order.objects.create()

@@ -16,12 +16,13 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
-from widget.views import widget_, order_, order_item
+from widget.views import widget_, order_, order_item, order_complete
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
     url(r'^widget/(?P<widget_id>[0-9]+)?/?$', widget_),
     url(r'^order/(?P<order_number>[a-f0-9]{10})?/?$', order_),
+    url(r'^order/(?P<order_number>[a-f0-9]{10})/complete/$', order_complete),
     url(r'^order/(?P<order_number>[a-f0-9]{10})/item/(?P<widget_id>[0-9]+)?/?$', order_item),
 ]

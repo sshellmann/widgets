@@ -44,9 +44,10 @@ def generate_order_number():
 class Order(FullDisplayModelMixin, models.Model):
     number = models.CharField(max_length=10, unique=True, default=generate_order_number)
     widgets = models.ManyToManyField(Widget, verbose_name="Items in order", through="OrderItem")
+    completed = models.BooleanField(default=False)
 
 
-class OrderItem(models.Model):
+class OrderItem(FullDisplayModelMixin, models.Model):
     quantity = models.PositiveIntegerField()
     widget = models.ForeignKey(Widget)
     order = models.ForeignKey(Order)

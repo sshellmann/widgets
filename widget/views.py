@@ -1,7 +1,8 @@
-from operator import and_, or_
+from operator import or_
 
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
+from django.db import transaction
 from rest_framework import exceptions
 from rest_framework.decorators import api_view
 
@@ -44,14 +45,14 @@ def widget_(request, widget_id=None):
 
         category_id = request.GET.get("category")
         if category_id and category_id.isdigit():
-            widgets = widgets.filter(category__id = category_id)
+            widgets = widgets.filter(category__id=category_id)
 
         # getlist on a QueryDict acts like it is multiple values coming from a checkbox with the same key
         features = request.GET.getlist("features")
         if features:
             feature_filters = []
             for feature in features:
-                feature_filters.append(Q(features__label__contains = feature))
+                feature_filters.append(Q(features__label__contains=feature))
             widgets = widgets.filter(reduce(or_, feature_filters))
 
         widgets = widgets.order_by("category__name")
@@ -84,7 +85,7 @@ def widget_(request, widget_id=None):
         return HttpResponse()
 
 
-@api_view(["GET", "POST", "DELETE"])
+@api_view(["GET", "POST", "PUT", "DELETE"])
 def order_(request, order_number=None):
     if request.method == "GET":
         if not order_number:
@@ -104,6 +105,25 @@ def order_(request, order_number=None):
         order = Order.objects.get(number=order_number)
         order.delete()
         return HttpResponse()
+
+
+@api_view(["POST"])
+@transaction.atomic
+def order_complete(request, order_number):
+    order = Order.objects.get(number=order_number)
+    order_items = OrderItem.objects.filter(order=order).select_related().all()
+    for order_item in order_items:
+        # If ordered widget quantity is unlimited, there is no need to reduce it
+        if order_item.widget.quantity is not None:
+            # Only remove quantity if the widget can satisfy the order
+            if order_item.widget.quantity > order_item.quantity:
+                order_item.widget.quantity -= order_item.quantity
+                order_item.widget.save()
+            else:
+                raise exceptions.ValidationError("Not enough stock to fulfill order")
+    order.completed = True
+    order.save()
+    return HttpResponse()
 
 
 @api_view(["GET", "POST", "DELETE"])
