@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db import transaction
 from rest_framework import exceptions
 from rest_framework.decorators import api_view
+from django.shortcuts import render
 
 from widget.models import Widget, Order, OrderItem
 from widget.forms import WidgetForm, OrderWidgetForm, UpdateWidgetForm
@@ -151,3 +152,7 @@ def order_item(request, order_number, widget_id=None):
         if order.orderitem_set.count() == 0:
             order.delete()
         return HttpResponse()
+
+
+def ui(request):
+    return render(request, "widget/index.html")
