@@ -48,57 +48,101 @@ class DataWidgetTestCase(TestCaseWithData):
         response = client.get("/widget/")
 
         assert response.status_code == 200
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"},
-                {"category": "cat2", "features": ["Big", "Blue"], "price": "20.00", "description": "second widget", "available_quantity": "unlimited", "name": "widget2"},
-                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "available_quantity": "unlimited", "name": "widget3"}
-            ]
-        }
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 3
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Blue"]
+        assert widgets[1]["price"] == "20.00"
+        assert widgets[1]["name"] == "widget2"
+        assert widgets[1]["description"] == "second widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
+
+        assert widgets[2]["category"] == "cat2"
+        assert widgets[2]["features"] == ["Big", "Fluffy"]
+        assert widgets[2]["price"] == "30.00"
+        assert widgets[2]["name"] == "widget3"
+        assert widgets[2]["description"] == "third widget"
+        assert widgets[2]["available_quantity"] == "unlimited"
 
     def test_by_id(self):
         client = APIClient()
         response = client.get("/widget/%s/" % self.widget1.id)
 
         assert response.status_code == 200
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"}
-            ]
-        }
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 1
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
 
     def test_by_category(self):
         client = APIClient()
         response = client.get("/widget/", {"category": str(self.cat1.id)})
 
         assert response.status_code == 200
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "available_quantity": "unlimited", "name": "widget1"}
-            ]
-        }
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 1
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
 
     def test_by_filter(self):
         client = APIClient()
         response = client.get("/widget/", {"features": ["Big", "Dog"]})
 
         assert response.status_code == 200
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat2", "price": "20.00", "features": ["Big", "Blue"], "name": "widget2", "description": "second widget", "available_quantity": "unlimited"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget", "available_quantity": "unlimited"},
-            ]
-        }
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 2
+        assert widgets[0]["category"] == "cat2"
+        assert widgets[0]["features"] == ["Big", "Blue"]
+        assert widgets[0]["price"] == "20.00"
+        assert widgets[0]["name"] == "widget2"
+        assert widgets[0]["description"] == "second widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Fluffy"]
+        assert widgets[1]["price"] == "30.00"
+        assert widgets[1]["name"] == "widget3"
+        assert widgets[1]["description"] == "third widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
 
         response = client.get("/widget/", {"features": ["Small", "Fluffy"]})
 
         assert response.status_code == 200
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "price": "10.00", "features": ["Small", "Red"], "name": "widget1", "description": "first widget", "available_quantity": "unlimited"},
-                {"category": "cat2", "price": "30.00", "features": ["Big", "Fluffy"], "name": "widget3", "description": "third widget", "available_quantity": "unlimited"},
-            ]
-        }
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 2
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Fluffy"]
+        assert widgets[1]["price"] == "30.00"
+        assert widgets[1]["name"] == "widget3"
+        assert widgets[1]["description"] == "third widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
+
 
     def test_update(self):
         client = APIClient()
@@ -159,12 +203,23 @@ class OrderTestCase(TestCaseWithData):
         OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         client = APIClient()
         response = client.get("/order/%s" % order.number)
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
-                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
-            ]
-        }
+        assert response.status_code == 200
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 2
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Fluffy"]
+        assert widgets[1]["price"] == "30.00"
+        assert widgets[1]["name"] == "widget3"
+        assert widgets[1]["description"] == "third widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
 
     def test_create(self):
         assert Order.objects.count() == 0
@@ -236,20 +291,42 @@ class OrderItemTestCase(TestCaseWithData):
         OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         client = APIClient()
         response = client.get("/order/%s/item/" % order.number)
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
-                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
-            ]
-        }
+        assert response.status_code == 200
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 2
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Fluffy"]
+        assert widgets[1]["price"] == "30.00"
+        assert widgets[1]["name"] == "widget3"
+        assert widgets[1]["description"] == "third widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
 
         response = client.get("/order/%s/item/%s" % (order.number, self.widget1.id))
-        assert json.loads(response.content) == {
-            "widgets": [
-                {"category": "cat1", "features": ["Small", "Red"], "price": "10.00", "description": "first widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget1"},
-                {"category": "cat2", "features": ["Big", "Fluffy"], "price": "30.00", "description": "third widget", "order_quantity": 5, "available_quantity": "unlimited", "name": "widget3"}
-            ]
-        }
+        assert response.status_code == 200
+
+        widgets = json.loads(response.content)["widgets"]
+        assert len(widgets) == 2
+        assert widgets[0]["category"] == "cat1"
+        assert widgets[0]["features"] == ["Small", "Red"]
+        assert widgets[0]["price"] == "10.00"
+        assert widgets[0]["name"] == "widget1"
+        assert widgets[0]["description"] == "first widget"
+        assert widgets[0]["available_quantity"] == "unlimited"
+
+        assert widgets[1]["category"] == "cat2"
+        assert widgets[1]["features"] == ["Big", "Fluffy"]
+        assert widgets[1]["price"] == "30.00"
+        assert widgets[1]["name"] == "widget3"
+        assert widgets[1]["description"] == "third widget"
+        assert widgets[1]["available_quantity"] == "unlimited"
 
     def test_create(self):
         order = Order.objects.create()

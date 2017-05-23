@@ -14,6 +14,7 @@ from widget.forms import WidgetForm, OrderWidgetForm, UpdateWidgetForm
 def get_widget_data(widgets):
     widget_data = [
         {
+            "id": widget.id,
             "name": widget.name,
             "description": widget.description,
             "category": widget.category.name,
