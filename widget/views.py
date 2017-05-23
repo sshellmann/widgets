@@ -7,7 +7,7 @@ from rest_framework import exceptions
 from rest_framework.decorators import api_view
 from django.shortcuts import render
 
-from widget.models import Widget, Order, OrderItem
+from widget.models import Widget, Order, OrderItem, Category
 from widget.forms import WidgetForm, OrderWidgetForm, UpdateWidgetForm
 
 
@@ -156,4 +156,5 @@ def order_item(request, order_number, widget_id=None):
 
 
 def ui(request):
-    return render(request, "widget/index.html")
+    categories = Category.objects.all()
+    return render(request, "widget/index.html", {"categories": categories})

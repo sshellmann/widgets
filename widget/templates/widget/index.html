@@ -7,6 +7,13 @@
 </head>
 <body>
     <div id="app-container"></div>
+    <script>
+        var categories = [
+        {% for category in categories %}
+            {"name": "{{category.name}}", "label": "{{category.label}}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        ];
+    </script>
     <script type="text/javascript" src="/compiled/bundle.js"></script></body>
 </body>
 </html>
