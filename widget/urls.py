@@ -21,9 +21,9 @@ from widget.views import ui, widget_, order_, order_item, order_complete
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
-    url('^/?$', ui),
+    url('^$', ui),
     url(r'^widget/(?P<widget_id>[0-9]+)?/?$', widget_),
     url(r'^order/(?P<order_number>[a-f0-9]{10})?/?$', order_),
     url(r'^order/(?P<order_number>[a-f0-9]{10})/complete/$', order_complete),
-    url(r'^order/(?P<order_number>[a-f0-9]{10})/item/(?P<widget_id>[0-9]+)?/?$', order_item),
+    url(r'^order/item/(?P<order_item_id>[0-9]+)?/?$', order_item),
 ]

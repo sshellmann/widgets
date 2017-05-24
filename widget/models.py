@@ -29,11 +29,11 @@ class Feature(FullDisplayModelMixin, models.Model):
 
 
 class Widget(FullDisplayModelMixin, models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=1000)
     category = models.ForeignKey(Category)
     price = models.DecimalField(decimal_places=2, max_digits=12, validators=[MinValueValidator(Decimal('0.01'))])
     features = models.ManyToManyField(Feature, verbose_name="Features for this widget")
-    name = models.CharField(max_length=100, blank=True, null=True)
-    description = models.CharField(max_length=1000, blank=True, null=True)
     quantity = models.PositiveIntegerField(blank=True, null=True)
 
 

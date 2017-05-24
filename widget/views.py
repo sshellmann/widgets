@@ -1,47 +1,23 @@
 from operator import or_
 
-from django.http import HttpResponse, JsonResponse
 from django.db.models import Q
 from django.db import transaction
+from django.shortcuts import render
 from rest_framework import exceptions
 from rest_framework.decorators import api_view
-from django.shortcuts import render
+from rest_framework.response import Response
+from rest_framework import status
 
 from widget.models import Widget, Order, OrderItem, Category
-from widget.forms import WidgetForm, OrderWidgetForm, UpdateWidgetForm
+from widget.serializers import WidgetSerializer, OrderSerializer, OrderItemSerializer
 
 
-def get_widget_data(widgets):
-    widget_data = [
-        {
-            "id": widget.id,
-            "name": widget.name,
-            "description": widget.description,
-            "category": widget.category.name,
-            "features": [feature.label for feature in widget.features.all()],
-            "price": widget.price,
-            "available_quantity": widget.quantity or "unlimited"
-        } for widget in widgets
-    ]
-    return widget_data
-
-
-def get_order_data(order):
-    order_items = order.orderitem_set.all()
-    data = []
-    for order_item in order_items:
-        widget_data = get_widget_data([order_item.widget])[0]
-        widget_data["order_quantity"] = order_item.quantity
-        data.append(widget_data)
-    return data
-
-
-@api_view(["GET", "POST", "PATCH"])
+@api_view(["GET", "POST", "PUT"])
 def widget_(request, widget_id=None):
     if request.method == "GET":
         if widget_id:
             widget = Widget.objects.get(id=int(widget_id))
-            return JsonResponse({"widgets": get_widget_data([widget])})
+            return Response(WidgetSerializer(widget).data)
 
         widgets = Widget.objects.all()
 
@@ -61,52 +37,56 @@ def widget_(request, widget_id=None):
         widgets = widgets.select_related("category").prefetch_related("features")
         widgets = widgets.all()
 
-        return JsonResponse({"widgets": get_widget_data(widgets)})
+        return Response(WidgetSerializer(widgets, many=True).data)
     elif request.method == "POST":
-        form = WidgetForm(request.data)
-        if form.is_valid():
-            form.save()
-            return HttpResponse()
+        serializer = WidgetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            raise exceptions.ValidationError(form.errors.as_text())
-    elif request.method == "PATCH":
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == "PUT":
         if not widget_id:
             raise exceptions.ValidationError("Widget id necessary")
         widget = Widget.objects.get(id=int(widget_id))
-        form = UpdateWidgetForm(request.data)
-        if form.is_valid():
-            quantity = form.cleaned_data["quantity"]
-            if quantity:
-                widget.quantity = quantity
-            price = form.cleaned_data["price"]
-            if price:
-                widget.price = price
-            widget.save()
+
+        serializer = WidgetSerializer(widget, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         else:
-            raise exceptions.ValidationError(form.errors.as_text())
-        return HttpResponse()
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET", "POST", "PUT", "DELETE"])
+@transaction.atomic
 def order_(request, order_number=None):
     if request.method == "GET":
         if not order_number:
             raise exceptions.PermissionDenied()
         order = Order.objects.get(number=order_number)
-        return JsonResponse({"widgets": get_order_data(order)})
+        return Response(OrderSerializer(order).data)
     elif request.method == "POST":
-        form = OrderWidgetForm(request.data)
-        if form.is_valid():
-            order = Order.objects.create()
-            quantity = form.cleaned_data["quantity"]
-            OrderItem.objects.create(widget=form.widget, order=order, quantity=quantity)
-            return HttpResponse(order.number)
+        order_serializer = OrderSerializer(data=request.data)
+
+        if order_serializer.is_valid():
+            with transaction.atomic():
+                order_serializer.save()
+                order_id = order_serializer.data["id"]
+                data_with_order_id = dict(request.data.items() + [("order", str(order_id))])
+                order_item_serializer = OrderItemSerializer(data=data_with_order_id)
+                if order_item_serializer.is_valid():
+                    order_item_serializer.save()
+                else:
+                    raise exceptions.ValidationError(order_item_serializer.errors)
+            data = dict(order_serializer.data.items() + order_item_serializer.data.items())
+            return Response(data, status=status.HTTP_201_CREATED)
         else:
-            raise exceptions.ValidationError(form.errors.as_text())
+            return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     elif request.method == "DELETE":
         order = Order.objects.get(number=order_number)
         order.delete()
-        return HttpResponse()
+        return Response()
 
 
 @api_view(["POST"])
@@ -125,34 +105,42 @@ def order_complete(request, order_number):
                 raise exceptions.ValidationError("Not enough stock to fulfill order")
     order.completed = True
     order.save()
-    return HttpResponse()
+    return Response()
 
 
-@api_view(["GET", "POST", "DELETE"])
-def order_item(request, order_number, widget_id=None):
-    order = Order.objects.get(number=order_number)
+@api_view(["GET", "POST", "PUT", "DELETE"])
+def order_item(request, order_item_id):
     if request.method == "GET":
-        if not widget_id:
-            return order_(request, order_number)
-        widget = Widget.objects.get(id=widget_id)
-        return JsonResponse({"widgets": get_order_data(order)})
+        if not order_item_id:
+            raise exceptions.NotAuthenticated
+        order_item = OrderItem.objects.get(id=order_item_id)
+        return Response(OrderItemSerializer(order_item).data)
     elif request.method == "POST":
-        form = OrderWidgetForm(request.data)
-        if form.is_valid():
-            quantity = form.cleaned_data["quantity"]
-            OrderItem.objects.create(widget=form.widget, order=order, quantity=quantity)
+        serializer = OrderItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            raise exceptions.ValidationError(form.errors.as_text())
-        return HttpResponse()
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == "PUT":
+        if not order_item_id:
+            raise exceptions.ValidationError("Order item id necessary")
+        order_item = OrderItem.objects.get(id=order_item_id)
+        serializer = OrderItemSerializer(order_item, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     elif request.method == "DELETE":
-        if not widget_id:
-            raise exceptions.ValidationError("Widget id necessary")
-        widget = Widget.objects.get(id=int(widget_id))
-        order_item = OrderItem.objects.filter(widget=widget, order=order)
+        if not order_item_id:
+            raise exceptions.ValidationError("Order item id necessary")
+        order_item = OrderItem.objects.get(id=order_item_id)
+        order = order_item.order
         order_item.delete()
         if order.orderitem_set.count() == 0:
             order.delete()
-        return HttpResponse()
+        return Response()
 
 
 def ui(request):

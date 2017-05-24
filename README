@@ -1,0 +1,12 @@
+The Widget Store
+
+A store for widgets. Any shape, size, or color you could want.
+
+Notes:
+  * Order creation is currently split into the order creation and the order item
+    creation. This could be improved by completing it as one step. Would require
+    more clever manipulation of the rest serializers than I am willing to do at
+    this point.
+  * Serializers are a bit messy and would greatly benefit from docstrings
+  * OrderItemWidgetRepresentation is incredibly complex and is manipulating
+    internals of the Rest Framework

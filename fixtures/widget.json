@@ -5,8 +5,8 @@
     "fields": {
         "category": 1,
         "price": "5.00",
-        "name": null,
-        "description": null,
+        "name": "Widget1",
+        "description": "Widget Description",
         "features": [
             11,
             13
@@ -19,8 +19,8 @@
     "fields": {
         "category": 1,
         "price": "5.00",
-        "name": null,
-        "description": null,
+        "name": "Widget2",
+        "description": "Widget Description",
         "features": [
             11,
             14
@@ -33,8 +33,8 @@
     "fields": {
         "category": 2,
         "price": "10.00",
-        "name": null,
-        "description": null,
+        "name": "Widget3",
+        "description": "Widget Description",
         "features": [
             6,
             10
@@ -47,8 +47,8 @@
     "fields": {
         "category": 2,
         "price": "10.00",
-        "name": null,
-        "description": null,
+        "name": "Widget4",
+        "description": "Widget Description",
         "features": [
             7,
             10
@@ -61,8 +61,8 @@
     "fields": {
         "category": 3,
         "price": "15.00",
-        "name": null,
-        "description": null,
+        "name": "Widget5",
+        "description": "Widget Description",
         "features": [
             3,
             4
@@ -75,8 +75,8 @@
     "fields": {
         "category": 3,
         "price": "15.00",
-        "name": null,
-        "description": null,
+        "name": "Widget6",
+        "description": "Widget Description",
         "features": [
             3,
             5
