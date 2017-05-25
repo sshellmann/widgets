@@ -21,6 +21,7 @@
         "price": "5.00",
         "name": "Widget2",
         "description": "Widget Description",
+        "quantity": "4",
         "features": [
             11,
             14

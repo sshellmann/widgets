@@ -22,6 +22,7 @@ class App extends React.Component {
         this.loadOrder = this.loadOrder.bind(this);
         this.filterProducts = this.filterProducts.bind(this);
         this.resetFilter = this.resetFilter.bind(this);
+        this.submit = this.submit.bind(this);
     }
 
     componentDidMount() {
@@ -187,13 +188,26 @@ class App extends React.Component {
         this.setState({"products": this.allProducts});
     }
 
+    submit() {
+        if (!$.isEmptyObject(this.state.order)) {
+            $.ajax({
+                url: "/order/" + this.state.order.number + "/complete/",
+                type: 'post',
+                cache: false,
+                success: function(data) {
+                this.setState({"order": {}});
+                }.bind(this)
+            });
+        }
+    }
+
     render() {
         return (
             <div className="container">
                 <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}
                     filterProducts={this.filterProducts} resetFilter={this.resetFilter}/>
                 <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem}
-                    removeItem={this.removeItem} loadOrder={this.loadOrder}/>
+                    removeItem={this.removeItem} loadOrder={this.loadOrder} submit={this.submit}/>
             </div>
         );
     }
@@ -317,6 +331,10 @@ class ShoppingCart extends React.Component {
         }
     }
 
+    handleClickSubmit() {
+        this.props.submit();
+    }
+
     render() {
         if (this.props.order.items) {
             var orders = this.props.order.items.map(function(item, idx) {
@@ -359,7 +377,7 @@ class ShoppingCart extends React.Component {
                             </tr>
                         </tfoot>
                     </table>
-                    <button type="button" className="btn-block btn btn-primary">
+                    <button type="button" onClick={this.handleClickSubmit.bind(this)} className="btn-block btn btn-primary">
                         <i className="fa fa-check"></i>
                         <span> Submit</span>
                     </button>

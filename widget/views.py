@@ -64,7 +64,10 @@ def order_(request, order_number=None):
     if request.method == "GET":
         if not order_number:
             raise exceptions.PermissionDenied()
-        order = Order.objects.get(number=order_number)
+        try:
+            order = Order.objects.get(number=order_number, completed=False)
+        except Order.DoesNotExist:
+            raise exceptions.ValidationError("Order does not exist")
         return Response(OrderSerializer(order).data)
     elif request.method == "POST":
         order_serializer = OrderSerializer(data=request.data)

@@ -252,6 +252,14 @@ class OrderTestCase(TestCaseWithData):
             "number": order.number
         }
 
+    def test_get_completed(self):
+        order = Order.objects.create(completed=True)
+        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        client = APIClient()
+        response = client.get("/order/%s" % order.number)
+        assert response.status_code == 400
+
+
     def test_create(self):
         assert Order.objects.count() == 0
         client = APIClient()
