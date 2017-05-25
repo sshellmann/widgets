@@ -209,7 +209,7 @@ class App extends React.Component {
 
     render() {
         return (
-            <div className="container">
+            <div className="container" style={{marginTop:"10px"}}>
                 <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}
                     filterProducts={this.filterProducts} resetFilter={this.resetFilter}/>
                 <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem}
@@ -227,9 +227,8 @@ class Store extends React.Component {
         return (
             <div className="panel panel-default">
                 <div className="panel-heading">
-                    <h3 className="panel-title">
-                        <FilterProducts filterProducts={this.props.filterProducts} resetFilter={this.props.resetFilter}/>
-                        Store</h3>
+                    <FilterProducts filterProducts={this.props.filterProducts} resetFilter={this.props.resetFilter}/>
+                    <h3 className="panel-title">Store</h3>
                 </div>
                 <div className="panel-body">
                     {sections}
@@ -243,25 +242,34 @@ class FilterProducts extends React.Component {
     handleSubmitFilter(evt) {
         evt.preventDefault();
         if (this.input.value !== "") {
-            this.props.filterProducts(this.input.value, function() {this.input.value = ""}.bind(this));
+            this.props.filterProducts(this.input.value);
         }
     }
 
     handleClickReset() {
+        this.input.value = "";
         this.props.resetFilter();
     }
 
     render() {
         return (
-            <form className="pull-right" onSubmit={evt => this.handleSubmitFilter.bind(this)(evt)}>
+            <form className="pull-right form-inline" onSubmit={evt => this.handleSubmitFilter.bind(this)(evt)}>
                 <span>Filter by feature: </span>
-                <input type="text" ref={(input) => this.input = input}/>
-                <button type="submit" className="btn btn-xs btn-primary">
-                    <span>Filter</span>
-                </button>
-                <button type="button" onClick={this.handleClickReset.bind(this)} className="btn btn-xs btn-default">
-                    <span>Reset</span>
-                </button>
+                <div className="form-group form-group-xs" style={{marginBottom:'0',width:'300px'}}>
+                    <div className="input-group">
+                        <input type="text" className="form-control" style={{height:"22px", fontSize:"12px"}} ref={(input) => this.input = input}/>
+                        <span className="input-group-btn">
+                            <button type="submit" className="btn btn-xs btn-primary">
+                                <span>Filter</span>
+                            </button>
+                        </span>
+                        <span className="input-group-btn">
+                            <button type="button" onClick={this.handleClickReset.bind(this)} className="btn btn-xs btn-default">
+                                <span>Reset</span>
+                            </button>
+                        </span>
+                    </div>
+                </div>
             </form>
         );
     }
@@ -337,10 +345,6 @@ class ShoppingCart extends React.Component {
         }
     }
 
-    handleClickSubmit() {
-        this.props.submit();
-    }
-
     render() {
         if (this.props.order.items) {
             var orders = this.props.order.items.map(function(item, idx) {
@@ -383,12 +387,24 @@ class ShoppingCart extends React.Component {
                             </tr>
                         </tfoot>
                     </table>
-                    <button type="button" onClick={this.handleClickSubmit.bind(this)} className="btn-block btn btn-primary">
-                        <i className="fa fa-check"></i>
-                        <span> Submit</span>
-                    </button>
+                    <ShoppingCartSubmit submit={this.props.submit} disabled={$.isEmptyObject(this.props.order)}/>
                 </div>
             </div>
+        );
+    }
+}
+
+class ShoppingCartSubmit extends React.Component {
+    handleClickSubmit() {
+        this.props.submit();
+    }
+
+    render() {
+        return (
+            <button type="button" disabled={this.props.disabled ? "disabled" : ""} onClick={this.handleClickSubmit.bind(this)} className="btn-block btn btn-primary">
+                <i className="fa fa-check"></i>
+                <span> Submit</span>
+            </button>
         );
     }
 }

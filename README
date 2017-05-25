@@ -5,10 +5,11 @@ A store for widgets. Any shape, size, or color you could want.
 Administration is handled by the django-admin functionality.
 
 Notes on backend:
+  * Move off sqlite
   * Order creation is currently split into the order creation and the order item
     creation. This could be improved by completing it as one step. Would require
-    more clever manipulation of the rest serializers than I am willing to do at
-    this point.
+    more clever manipulation of the rest serializers than I am unwilling to do
+    at this point.
   * Serializers are a bit messy and would greatly benefit from docstrings
   * OrderItemWidgetRepresentation is incredibly complex and is manipulating
     internals of the Rest Framework
@@ -20,3 +21,4 @@ Notes on frontend:
   * Convert all setStates to use the react update helper
     * Remove lodash after that is done
   * Error handling on the page
+  * Suggestions in a drop-down  for filtering on features would help
