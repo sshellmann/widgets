@@ -40,6 +40,7 @@ class App extends React.Component {
         this.decrementItem = this.decrementItem.bind(this);
         this.incrementItem = this.incrementItem.bind(this);
         this.removeItem = this.removeItem.bind(this);
+        this.loadOrder = this.loadOrder.bind(this);
     }
 
     componentDidMount() {
@@ -170,11 +171,25 @@ class App extends React.Component {
         }
     }
 
+    loadOrder(orderNumber, callback) {
+        $.ajax({
+            url: "/order/" + orderNumber,
+            dataType: 'json',
+            type: 'get',
+            cache: false,
+            success: function(data) {
+                this.setState({"order": data});
+                callback();
+            }.bind(this)
+        });
+    }
+
     render() {
         return (
             <div className="container">
                 <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}/>
-                <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem} removeItem={this.removeItem}/>
+                <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem}
+                    removeItem={this.removeItem} loadOrder={this.loadOrder}/>
             </div>
         );
     }
@@ -278,10 +293,15 @@ class ShoppingCart extends React.Component {
             var orders = null;
         }
         var total = this.getTotal(this.props.order.items);
+
+        if (! $.isEmptyObject(this.props.order)) {
+            var orderInfo = <span> - {this.props.order.number}</span>;
+        }
         return (
             <div className="panel panel-default">
                 <div className="panel-heading">
-                    <h3 className="panel-title">Shopping Cart</h3>
+                    <LoadOrder loadOrder={this.props.loadOrder}/>
+                    <h3 className="panel-title">Shopping Cart{orderInfo}</h3>
                 </div>
                 <div className="panel-body">
                     <table className="table">
@@ -311,6 +331,25 @@ class ShoppingCart extends React.Component {
                     </button>
                 </div>
             </div>
+        );
+    }
+}
+
+class LoadOrder extends React.Component {
+    handleSubmitLoad(evt) {
+        evt.preventDefault()
+        this.props.loadOrder(this.input.value, function() {this.input.value = ""}.bind(this));
+    }
+
+    render() {
+        return (
+            <form className="pull-right" onSubmit={evt => this.handleSubmitLoad.bind(this)(evt)}>
+                <span>Load Order: </span>
+                <input type="text" ref={(input) => this.input = input}/>
+                <button type="submit" className="btn btn-xs btn-primary">
+                    <span>Load</span>
+                </button>
+            </form>
         );
     }
 }
