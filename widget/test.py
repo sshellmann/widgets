@@ -148,17 +148,18 @@ class DataWidgetTestCase(TestCaseWithData):
             "quantity": "20",
             "name": "Common Widget",
             "description": "Not very popular widget",
-            "category": str(self.widget1.category.id),
-            "features": (str(self.feature1.id), str(self.feature2.id)),
+            "category": str(self.widget2.category.id),
+            "features": (str(self.feature3.id), str(self.feature4.id)),
         }
-        response = client.put("/widget/%s" % self.widget1.id, put_data)
+        response = client.put("/widget/%s" % self.widget2.id, put_data)
         assert response.status_code == 200
         assert Widget.objects.count() == 3
-        widget = Widget.objects.get(id=self.widget1.id)
+        widget = Widget.objects.get(id=self.widget2.id)
         assert widget.name == "Common Widget"
         assert widget.description == "Not very popular widget"
         assert widget.quantity == 20
         assert widget.price == 5.00
+        assert [feature.id for feature in widget.features.all()] == [self.feature3.id, self.feature4.id]
 
     def test_create(self):
         client = APIClient()

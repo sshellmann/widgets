@@ -7,6 +7,7 @@ require("font-awesome-webpack");
 var update = require('react-addons-update');
 var _ = require('lodash');
 
+
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -36,6 +37,11 @@ class App extends React.Component {
                 this.setState({"products": data});
             }.bind(this)
         });
+
+        var previousOrderNumber = localStorage.getItem("orderNumber")
+        if (previousOrderNumber !== null) {
+            this.loadOrder(previousOrderNumber);
+        }
     }
 
     newOrder(widget) {
@@ -50,6 +56,7 @@ class App extends React.Component {
             },
             success: function(data) {
                 this.setState({"order": data});
+                localStorage.setItem("orderNumber", data.number);
             }.bind(this)
         });
     }
@@ -154,7 +161,7 @@ class App extends React.Component {
         }
     }
 
-    loadOrder(orderNumber, callback) {
+    loadOrder(orderNumber) {
         $.ajax({
             url: "/order/" + orderNumber,
             dataType: 'json',
@@ -162,7 +169,6 @@ class App extends React.Component {
             cache: false,
             success: function(data) {
                 this.setState({"order": data});
-                callback();
             }.bind(this)
         });
     }
@@ -207,7 +213,7 @@ class App extends React.Component {
                 <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}
                     filterProducts={this.filterProducts} resetFilter={this.resetFilter}/>
                 <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem}
-                    removeItem={this.removeItem} loadOrder={this.loadOrder} submit={this.submit}/>
+                    removeItem={this.removeItem} submit={this.submit}/>
             </div>
         );
     }
@@ -346,14 +352,14 @@ class ShoppingCart extends React.Component {
         }
         var total = this.getTotal(this.props.order.items);
 
+        /* orderInfo displayed the order number for later entry and retrieval, replace with localStorage
         if (! $.isEmptyObject(this.props.order)) {
             var orderInfo = <span> - {this.props.order.number}</span>;
-        }
+        }*/
         return (
             <div className="panel panel-default">
                 <div className="panel-heading">
-                    <LoadOrder loadOrder={this.props.loadOrder}/>
-                    <h3 className="panel-title">Shopping Cart{orderInfo}</h3>
+                    <h3 className="panel-title">Shopping Cart</h3>
                 </div>
                 <div className="panel-body">
                     <table className="table">
@@ -387,6 +393,7 @@ class ShoppingCart extends React.Component {
     }
 }
 
+/* Component for having an input to load orders, replaced with localStorage
 class LoadOrder extends React.Component {
     handleSubmitLoad(evt) {
         evt.preventDefault()
@@ -404,7 +411,7 @@ class LoadOrder extends React.Component {
             </form>
         );
     }
-}
+}*/
 
 class OrderItem extends React.Component {
     handleClickDecrement() {

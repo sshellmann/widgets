@@ -2,6 +2,8 @@ The Widget Store
 
 A store for widgets. Any shape, size, or color you could want.
 
+Administration is handled by the django-admin functionality.
+
 Notes on backend:
   * Order creation is currently split into the order creation and the order item
     creation. This could be improved by completing it as one step. Would require
@@ -13,6 +15,7 @@ Notes on backend:
   * Implement AND for feature filtering
 
 Notes on frontend:
+  * Make it less ugly
   * Use flux to manage data
   * Convert all setStates to use the react update helper
     * Remove lodash after that is done
