@@ -4,15 +4,27 @@ require("bootstrap/dist/css/bootstrap.css");
 var React = require("react");
 var ReactDOM = require("react-dom");
 require("font-awesome-webpack");
+var update = require('react-addons-update');
 
 const order = {
     "number": "fg94nas2a1",
-    "products": [
+    "items": [
         {"id": "1", "name": "", "description": "", "price": "10.00", "features": ["tiny"], "category": "prime", "quantity": 3},
         {"id": "2", "name": "", "description": "", "price": "20.00", "features": ["small", "yellow"], "category": "prime", "quantity": 2},
         {"id": "5", "name": "", "description": "", "price": "50.00", "features": ["huge", "red"], "category": "extreme", "quantity": 10},
     ]
 }
+
+/*
+ * Widgets
+[{id: 5, category: "elite", price: "10.00", features: ["Small", "Chrome"], name: "Widget3",…},…]
+{id: 5, category: "elite", price: "10.00", features: ["Small", "Chrome"], name: "Widget3",…}
+{id: 6, category: "elite", price: "10.00", features: ["Large", "Chrome"], name: "Widget4",…}
+{id: 7, category: "extreme", price: "15.00", features: ["Huge", "Red"], name: "Widget5",…}
+{id: 8, category: "extreme", price: "15.00", features: ["Huge", "Blue"], name: "Widget6",…}
+{id: 3, category: "prime", price: "5.00", features: ["Small", "Red"], name: "Widget1",…}
+{id: 4, category: "prime", price: "5.00", features: ["Small", "Blue"], name: "Widget2",…}
+*/
 
 
 class App extends React.Component {
@@ -23,6 +35,7 @@ class App extends React.Component {
             products: [],
             order: {}
         };
+        this.addWidgetToCart = this.addWidgetToCart.bind(this);
     }
 
     componentDidMount() {
@@ -32,15 +45,74 @@ class App extends React.Component {
             type: 'get',
             cache: false,
             success: function(data) {
-                this.setState({"products": data.widgets});
+                this.setState({"products": data});
             }.bind(this)
         });
+    }
+
+    addWidgetToCart(widget) {
+        if ($.isEmptyObject(this.state.order)) {
+            $.ajax({
+                url: "/order/",
+                dataType: 'json',
+                type: 'post',
+                cache: false,
+                data: {
+                    "widget": widget.id,
+                    "quantity": 1,
+                },
+                success: function(data) {
+                    this.setState({"order": data});
+                }.bind(this)
+            });
+        } else {
+            var existing = this.state.order.items.filter(function(item) {
+                if (item.widget.id == widget.id) {
+                    return item.id;
+                }
+            });
+            if (existing && existing.length > 0) {
+                $.ajax({
+                    url: "/order/item/" + existing[0].id,
+                    dataType: 'json',
+                    type: 'put',
+                    cache: false,
+                    data: {
+                        "order": this.state.order.id,
+                        "widget": widget.id,
+                        "quantity": existing.quantity + 1,
+                    },
+                    success: function(data) {
+                        this.setState({
+                            order: update(this.state.order, {items: {$push: [data]}})
+                        })
+                    }.bind(this)
+                });
+            } else {
+                $.ajax({
+                    url: "/order/item/",
+                    dataType: 'json',
+                    type: 'post',
+                    cache: false,
+                    data: {
+                        "order": this.state.order.id,
+                        "widget": widget.id,
+                        "quantity": 1,
+                    },
+                    success: function(data) {
+                        this.setState({
+                            order: update(this.state.order, {items: {$push: [data]}})
+                        })
+                    }.bind(this)
+                });
+            }
+        }
     }
 
     render() {
         return (
             <div className="container">
-                <Store categories={this.state.categories} products={this.state.products}/>
+                <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}/>
                 <ShoppingCart order={this.state.order}/>
             </div>
         );
@@ -50,7 +122,7 @@ class App extends React.Component {
 class Store extends React.Component {
     render() {
         var sections = this.props.categories.map(function(category, idx) {
-            return <StoreSection key={idx} category={category} products={this.props.products}/>;
+            return <StoreSection key={idx} category={category} products={this.props.products} addWidgetToCart={this.props.addWidgetToCart}/>;
         }.bind(this));
         return (
             <div className="panel panel-default">
@@ -69,7 +141,7 @@ class StoreSection extends React.Component {
     render() {
         var productDisplays = this.props.products.map(function(product, idx) {
             if (product.category == this.props.category.name) {
-                return <ProductDisplay key={idx} product={product}/>;
+                return <ProductDisplay key={idx} product={product} addWidgetToCart={this.props.addWidgetToCart}/>;
             }
         }.bind(this));
         return (
@@ -84,6 +156,10 @@ class StoreSection extends React.Component {
 }
 
 class ProductDisplay extends React.Component {
+    handleClick() {
+        this.props.addWidgetToCart(this.props.product);
+    }
+
     render() {
         var features = this.props.product.features.map(function(feature, idx) {
             return <li key={idx}>{feature}</li>;
@@ -110,7 +186,7 @@ class ProductDisplay extends React.Component {
                         </div>
                     </div>
                     <div style={{textAlign:"center"}}>
-                        <button type="button" className="btn btn-primary btn-xs" style={{width:"100%"}}>Add to Cart</button>
+                        <button type="button" onClick={this.handleClick.bind(this)} className="btn btn-primary btn-xs" style={{width:"100%"}}>Add to Cart</button>
                     </div>
                 </div>
             </div>
@@ -119,25 +195,27 @@ class ProductDisplay extends React.Component {
 }
 
 class ShoppingCart extends React.Component {
-    getTotal(products) {
-        if (products) {
-            var total = products.reduce(function(product1, product2) {
-                return (product1.price * product1.quantity) + (product2.price * product2.quantity);
-            }, 0);
-            return total;
+    getTotal(items) {
+        if (items) {
+            var total = 0;
+            items.map(function(item) {
+                total += (item.widget.price * item.quantity);
+            });
+            return total.toFixed(2);
         } else {
             return "0.00"
         }
     }
 
     render() {
-        if (this.props.order.products) {
-            var orders = this.props.order.products.map(function(product, idx) {
-                return <OrderItem key={idx} product={product}/>;
+        if (this.props.order.items) {
+            var orders = this.props.order.items.map(function(item, idx) {
+                return <OrderItem key={idx} item={item}/>;
             });
         } else {
             var orders = null;
         }
+        var total = this.getTotal(this.props.order.items);
         return (
             <div className="panel panel-default">
                 <div className="panel-heading">
@@ -161,7 +239,7 @@ class ShoppingCart extends React.Component {
                         <tfoot>
                             <tr>
                                 <td colSpan="3" style={{textAlign:'right'}}><strong>Total:</strong></td>
-                                <td colSpan="3">{this.getTotal(this.props.order.products)}</td>
+                                <td colSpan="3">{total}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -177,16 +255,16 @@ class ShoppingCart extends React.Component {
 
 class OrderItem extends React.Component {
     render() {
-        var product = this.props.product;
-        var features = product.features.map(function(feature, idx) {
+        var item = this.props.item;
+        var features = item.widget.features.map(function(feature, idx) {
             return <li key={idx}>{feature}</li>;
         });
         return (
             <tr>
-                <td>{product.name}</td>
-                <td>{product.description}</td>
+                <td>{item.widget.name}</td>
+                <td>{item.widget.description}</td>
                 <td><ul className="list-inline">{features}</ul></td>
-                <td>{product.price}</td>
+                <td>{item.price}</td>
                 <td>
                     <div className="form-group form-group-sm" style={{marginBottom:'0',width:'110px'}}>
                         <div className="">
@@ -194,7 +272,7 @@ class OrderItem extends React.Component {
                                 <span className="input-group-btn">
                                     <button type="button" className="btn btn-sm btn-default"><i className="fa fa-minus"></i></button>
                                 </span>
-                                <input style={{textAlign:'right'}} type="text" defaultValue={product.quantity} className="form-control"/>
+                                <input style={{textAlign:'right'}} type="text" defaultValue={item.quantity} className="form-control"/>
                                 <span className="input-group-btn">
                                     <button type="button" className="btn btn-sm btn-default"><i className="fa fa-plus"></i></button>
                                 </span>

@@ -79,7 +79,8 @@ def order_(request, order_number=None):
                     order_item_serializer.save()
                 else:
                     raise exceptions.ValidationError(order_item_serializer.errors)
-            data = dict(order_serializer.data.items() + order_item_serializer.data.items())
+            data = dict(order_serializer.data.items())
+            data["items"] = [dict(order_item_serializer.data.items())]
             return Response(data, status=status.HTTP_201_CREATED)
         else:
             return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

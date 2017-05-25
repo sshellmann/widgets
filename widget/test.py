@@ -204,42 +204,52 @@ class DataWidgetTestCase(TestCaseWithData):
 class OrderTestCase(TestCaseWithData):
     def test_get(self):
         order = Order.objects.create()
-        OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
-        OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
+        item1 = OrderItem.objects.create(widget=self.widget1, order=order, quantity=5)
+        item2 = OrderItem.objects.create(widget=self.widget3, order=order, quantity=5)
         client = APIClient()
         response = client.get("/order/%s" % order.number)
         assert response.status_code == 200
 
         assert json.loads(response.content) == {
-            "widgets": [
+            "items": [
                 {
-                    "id": self.widget1.id,
-                    "category": "cat1",
-                    "description": "first widget",
-                    "price": "10.00",
-                    "name": "widget1",
-                    "quantity": None,
-                    "features": [
-                        "Small",
-                        "Red"
-                    ]
+                    "id": item1.id,
+                    "widget": {
+                        "category": "cat1",
+                        "description": "first widget",
+                        "price": "10.00",
+                        "features": [
+                            "Small",
+                            "Red"
+                        ],
+                        "quantity": None,
+                        "id": self.widget1.id,
+                        "name": "widget1"
+                    },
+                    "order": 1,
+                    "quantity": 5
                 },
                 {
-                    "id": self.widget3.id,
-                    "category": "cat2",
-                    "description": "third widget",
-                    "price": "30.00",
-                    "name": "widget3",
-                    "quantity": None,
-                    "features": [
-                        "Big",
-                        "Fluffy"
-                    ]
+                    "id": item2.id,
+                    "widget": {
+                        "category": "cat2",
+                        "description": "third widget",
+                        "price": "30.00",
+                        "features": [
+                            "Big",
+                            "Fluffy"
+                        ],
+                        "quantity": None,
+                        "id": self.widget3.id,
+                        "name": "widget3"
+                    },
+                    "order": 1,
+                    "quantity": 5
                 }
             ],
             "completed": False,
             "id": order.id,
-            "number": order.number,
+            "number": order.number
         }
 
     def test_create(self):
@@ -318,6 +328,7 @@ class OrderItemTestCase(TestCaseWithData):
         assert response.status_code == 200
 
         assert json.loads(response.content) == {
+            "id": order_item.id,
             "widget": {
                 "category": "cat1",
                 "description": "first widget",

@@ -34,6 +34,7 @@
     "less": "^2.7.2",
     "raw-loader": "^0.5.1",
     "react": "^15.5.4",
+    "react-addons-update": "^15.5.2",
     "react-dom": "^15.5.4",
     "url-loader": "^0.5.8",
     "webpack": "^2.5.1"

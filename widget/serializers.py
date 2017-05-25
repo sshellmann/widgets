@@ -118,7 +118,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ("quantity", "widget", "order")
+        fields = ("id", "quantity", "widget", "order")
         validators = [validate_quantity]
 
     def create(self, validated_data):
@@ -131,12 +131,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    widgets = WidgetSerializer(many=True, read_only=True)
+    items = OrderItemSerializer(source='orderitem_set', many=True, read_only=True)
     completed = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Order
-        fields = ("id", "number", "widgets", "completed")
+        fields = ("id", "number", "items", "completed")
 
     def create(self, validated_data):
         order = Order.objects.create()
