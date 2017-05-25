@@ -10,6 +10,7 @@ Notes on backend:
   * Serializers are a bit messy and would greatly benefit from docstrings
   * OrderItemWidgetRepresentation is incredibly complex and is manipulating
     internals of the Rest Framework
+  * Implement AND for feature filtering
 
 Notes on frontend:
   * Use flux to manage data

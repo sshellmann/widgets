@@ -7,27 +7,6 @@ require("font-awesome-webpack");
 var update = require('react-addons-update');
 var _ = require('lodash');
 
-const order = {
-    "number": "fg94nas2a1",
-    "items": [
-        {"id": "1", "name": "", "description": "", "price": "10.00", "features": ["tiny"], "category": "prime", "quantity": 3},
-        {"id": "2", "name": "", "description": "", "price": "20.00", "features": ["small", "yellow"], "category": "prime", "quantity": 2},
-        {"id": "5", "name": "", "description": "", "price": "50.00", "features": ["huge", "red"], "category": "extreme", "quantity": 10},
-    ]
-}
-
-/*
- * Widgets
-[{id: 5, category: "elite", price: "10.00", features: ["Small", "Chrome"], name: "Widget3",…},…]
-{id: 5, category: "elite", price: "10.00", features: ["Small", "Chrome"], name: "Widget3",…}
-{id: 6, category: "elite", price: "10.00", features: ["Large", "Chrome"], name: "Widget4",…}
-{id: 7, category: "extreme", price: "15.00", features: ["Huge", "Red"], name: "Widget5",…}
-{id: 8, category: "extreme", price: "15.00", features: ["Huge", "Blue"], name: "Widget6",…}
-{id: 3, category: "prime", price: "5.00", features: ["Small", "Red"], name: "Widget1",…}
-{id: 4, category: "prime", price: "5.00", features: ["Small", "Blue"], name: "Widget2",…}
-*/
-
-
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -41,6 +20,8 @@ class App extends React.Component {
         this.incrementItem = this.incrementItem.bind(this);
         this.removeItem = this.removeItem.bind(this);
         this.loadOrder = this.loadOrder.bind(this);
+        this.filterProducts = this.filterProducts.bind(this);
+        this.resetFilter = this.resetFilter.bind(this);
     }
 
     componentDidMount() {
@@ -50,6 +31,7 @@ class App extends React.Component {
             type: 'get',
             cache: false,
             success: function(data) {
+                this.allProducts = data;
                 this.setState({"products": data});
             }.bind(this)
         });
@@ -184,10 +166,32 @@ class App extends React.Component {
         });
     }
 
+    filterProducts(criteria) {
+        var features = $.trim(criteria).split(" ");
+        var url = "/widget/?";
+        features.forEach(function(feature) {
+            url += "features=" + feature + "&";
+        });
+        $.ajax({
+            url: url,
+            dataType: 'json',
+            type: 'get',
+            cache: false,
+            success: function(data) {
+                this.setState({"products": data});
+            }.bind(this)
+        });
+    }
+
+    resetFilter() {
+        this.setState({"products": this.allProducts});
+    }
+
     render() {
         return (
             <div className="container">
-                <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}/>
+                <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}
+                    filterProducts={this.filterProducts} resetFilter={this.resetFilter}/>
                 <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem}
                     removeItem={this.removeItem} loadOrder={this.loadOrder}/>
             </div>
@@ -203,12 +207,42 @@ class Store extends React.Component {
         return (
             <div className="panel panel-default">
                 <div className="panel-heading">
-                    <h3 className="panel-title">Store</h3>
+                    <h3 className="panel-title">
+                        <FilterProducts filterProducts={this.props.filterProducts} resetFilter={this.props.resetFilter}/>
+                        Store</h3>
                 </div>
                 <div className="panel-body">
                     {sections}
                 </div>
             </div>
+        );
+    }
+}
+
+class FilterProducts extends React.Component {
+    handleSubmitFilter(evt) {
+        evt.preventDefault();
+        if (this.input.value !== "") {
+            this.props.filterProducts(this.input.value, function() {this.input.value = ""}.bind(this));
+        }
+    }
+
+    handleClickReset() {
+        this.props.resetFilter();
+    }
+
+    render() {
+        return (
+            <form className="pull-right" onSubmit={evt => this.handleSubmitFilter.bind(this)(evt)}>
+                <span>Filter by feature: </span>
+                <input type="text" ref={(input) => this.input = input}/>
+                <button type="submit" className="btn btn-xs btn-primary">
+                    <span>Filter</span>
+                </button>
+                <button type="button" onClick={this.handleClickReset.bind(this)} className="btn btn-xs btn-default">
+                    <span>Reset</span>
+                </button>
+            </form>
         );
     }
 }

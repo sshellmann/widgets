@@ -30,7 +30,7 @@ def widget_(request, widget_id=None):
         if features:
             feature_filters = []
             for feature in features:
-                feature_filters.append(Q(features__label__contains=feature))
+                feature_filters.append(Q(features__label__icontains=feature))
             widgets = widgets.filter(reduce(or_, feature_filters))
 
         widgets = widgets.order_by("category__name")
