@@ -5,6 +5,7 @@ var React = require("react");
 var ReactDOM = require("react-dom");
 require("font-awesome-webpack");
 var update = require('react-addons-update');
+var _ = require('lodash');
 
 const order = {
     "number": "fg94nas2a1",
@@ -36,6 +37,9 @@ class App extends React.Component {
             order: {}
         };
         this.addWidgetToCart = this.addWidgetToCart.bind(this);
+        this.decrementItem = this.decrementItem.bind(this);
+        this.incrementItem = this.incrementItem.bind(this);
+        this.removeItem = this.removeItem.bind(this);
     }
 
     componentDidMount() {
@@ -50,62 +54,119 @@ class App extends React.Component {
         });
     }
 
+    newOrder(widget) {
+        $.ajax({
+            url: "/order/",
+            dataType: 'json',
+            type: 'post',
+            cache: false,
+            data: {
+                "widget": widget.id,
+                "quantity": 1,
+            },
+            success: function(data) {
+                this.setState({"order": data});
+            }.bind(this)
+        });
+    }
+
+    findIndex(item) {
+        var idx = null;
+        this.state.order.items.map(function(item_, idx_) {
+            if (item.id === item_.id) {
+                idx = idx_;
+            }
+        });
+        return idx;
+    }
+
+    updateQuantity(item, newQuantity) {
+        $.ajax({
+            url: "/order/item/" + item.id,
+            dataType: 'json',
+            type: 'put',
+            cache: false,
+            data: {
+                "order": this.state.order.id,
+                "widget": item.widget.id,
+                "quantity": newQuantity,
+            },
+            success: function(data) {
+                var itemIdx = this.findIndex(item);
+                var orderClone = _.extend({}, this.state.order);
+                orderClone.items[itemIdx] = data;
+                this.setState({"order": orderClone});
+            }.bind(this)
+        });
+    }
+
+    newItem(widget) {
+        $.ajax({
+            url: "/order/item/",
+            dataType: 'json',
+            type: 'post',
+            cache: false,
+            data: {
+                "order": this.state.order.id,
+                "widget": widget.id,
+                "quantity": 1,
+            },
+            success: function(data) {
+                this.setState({
+                    order: update(this.state.order, {items: {$push: [data]}})
+                })
+            }.bind(this)
+        });
+    }
+
     addWidgetToCart(widget) {
         if ($.isEmptyObject(this.state.order)) {
-            $.ajax({
-                url: "/order/",
-                dataType: 'json',
-                type: 'post',
-                cache: false,
-                data: {
-                    "widget": widget.id,
-                    "quantity": 1,
-                },
-                success: function(data) {
-                    this.setState({"order": data});
-                }.bind(this)
-            });
+            this.newOrder(widget);
         } else {
-            var existing = this.state.order.items.filter(function(item) {
+            var existing = null;
+            this.state.order.items.map(function(item) {
                 if (item.widget.id == widget.id) {
-                    return item.id;
+                    existing = item;
                 }
             });
-            if (existing && existing.length > 0) {
-                $.ajax({
-                    url: "/order/item/" + existing[0].id,
-                    dataType: 'json',
-                    type: 'put',
-                    cache: false,
-                    data: {
-                        "order": this.state.order.id,
-                        "widget": widget.id,
-                        "quantity": existing.quantity + 1,
-                    },
-                    success: function(data) {
-                        this.setState({
-                            order: update(this.state.order, {items: {$push: [data]}})
-                        })
-                    }.bind(this)
-                });
+            if (existing !== null) {
+                this.updateQuantity(existing, existing.quantity + 1);
             } else {
-                $.ajax({
-                    url: "/order/item/",
-                    dataType: 'json',
-                    type: 'post',
-                    cache: false,
-                    data: {
-                        "order": this.state.order.id,
-                        "widget": widget.id,
-                        "quantity": 1,
-                    },
-                    success: function(data) {
-                        this.setState({
-                            order: update(this.state.order, {items: {$push: [data]}})
-                        })
-                    }.bind(this)
-                });
+                this.newItem(widget);
             }
+        }
+    }
+
+    removeItem(item) {
+        $.ajax({
+            url: "/order/item/" + item.id,
+            type: 'delete',
+            cache: false,
+            success: function() {
+                var idx = this.findIndex(item);
+                if (idx !== null) {
+                    if (this.state.order.items.length > 1) {
+                        this.setState({
+                            order: update(this.state.order, {items: {$splice: [[idx, 1]]}})
+                        })
+                    } else {
+                        this.setState({order: {}});
+                    }
+                }
+            }.bind(this)
+        });
+    }
+
+    incrementItem(item) {
+        this.updateQuantity(item, item.quantity + 1);
+    }
+
+    decrementItem(item) {
+        var newQuantity = item.quantity - 1;
+        if (newQuantity <= 0) {
+            this.removeItem(item);
+        } else {
+            this.updateQuantity(item, item.quantity - 1);
         }
     }
 
@@ -113,7 +174,7 @@ class App extends React.Component {
         return (
             <div className="container">
                 <Store categories={this.state.categories} products={this.state.products} addWidgetToCart={this.addWidgetToCart}/>
-                <ShoppingCart order={this.state.order}/>
+                <ShoppingCart order={this.state.order} decrementItem={this.decrementItem} incrementItem={this.incrementItem} removeItem={this.removeItem}/>
             </div>
         );
     }
@@ -156,7 +217,7 @@ class StoreSection extends React.Component {
 }
 
 class ProductDisplay extends React.Component {
-    handleClick() {
+    handleClickAddToCart() {
         this.props.addWidgetToCart(this.props.product);
     }
 
@@ -186,7 +247,7 @@ class ProductDisplay extends React.Component {
                         </div>
                     </div>
                     <div style={{textAlign:"center"}}>
-                        <button type="button" onClick={this.handleClick.bind(this)} className="btn btn-primary btn-xs" style={{width:"100%"}}>Add to Cart</button>
+                        <button type="button" onClick={this.handleClickAddToCart.bind(this)} className="btn btn-primary btn-xs" style={{width:"100%"}}>Add to Cart</button>
                     </div>
                 </div>
             </div>
@@ -210,8 +271,9 @@ class ShoppingCart extends React.Component {
     render() {
         if (this.props.order.items) {
             var orders = this.props.order.items.map(function(item, idx) {
-                return <OrderItem key={idx} item={item}/>;
-            });
+                return <OrderItem key={idx} item={item} decrementItem={this.props.decrementItem}
+                    incrementItem={this.props.incrementItem} removeItem={this.props.removeItem}/>;
+            }.bind(this));
         } else {
             var orders = null;
         }
@@ -254,8 +316,23 @@ class ShoppingCart extends React.Component {
 }
 
 class OrderItem extends React.Component {
+    handleClickDecrement() {
+        this.props.decrementItem(this.props.item);
+    }
+
+    handleClickIncrement() {
+        this.props.incrementItem(this.props.item);
+    }
+
+    handleClickRemove() {
+        this.props.removeItem(this.props.item);
+    }
+
     render() {
         var item = this.props.item;
+        if (item.quantity <= 0) {
+            return null;
+        }
         var features = item.widget.features.map(function(feature, idx) {
             return <li key={idx}>{feature}</li>;
         });
@@ -270,18 +347,18 @@ class OrderItem extends React.Component {
                         <div className="">
                             <div className="input-group">
                                 <span className="input-group-btn">
-                                    <button type="button" className="btn btn-sm btn-default"><i className="fa fa-minus"></i></button>
+                                    <button type="button" onClick={this.handleClickDecrement.bind(this)} className="btn btn-sm btn-default"><i className="fa fa-minus"></i></button>
                                 </span>
-                                <input style={{textAlign:'right'}} type="text" defaultValue={item.quantity} className="form-control"/>
+                                <input style={{textAlign:'right'}} readOnly="readonly" type="text" value={item.quantity} className="form-control"/>
                                 <span className="input-group-btn">
-                                    <button type="button" className="btn btn-sm btn-default"><i className="fa fa-plus"></i></button>
+                                    <button type="button" onClick={this.handleClickIncrement.bind(this)} className="btn btn-sm btn-default"><i className="fa fa-plus"></i></button>
                                 </span>
                             </div>
                         </div>
                     </div>
                 </td>
                 <td>
-                    <button type="button" className="btn btn-sm btn-default">
+                    <button type="button" onClick={this.handleClickRemove.bind(this)} className="btn btn-sm btn-default">
                         <i className="fa fa-remove"></i>
                     </button>
                 </td>
